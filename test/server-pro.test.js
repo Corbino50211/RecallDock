@@ -11,7 +11,7 @@ test('upload folder contains the current backend',()=>assert.equal(readFileSync(
 test('standalone upload starts from another cwd, creates invite and persists accounts across restart',async()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'recall-upload-'));cpSync(root,dir,{recursive:true});
  const probe=net.createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));const port=probe.address().port;await new Promise(r=>probe.close(r));
- writeFileSync(path.join(dir,'settings.json'),JSON.stringify({port,frontendOrigin:'https://corbino50211.github.io'}));
+ writeFileSync(path.join(dir,'settings.json'),JSON.stringify({port,frontendOrigin:'https://corbino50211.github.io',tunnel:false}));
  let child;
  async function boot(){child=spawn(process.execPath,[path.join(dir,'server.js')],{cwd:tmpdir(),env:{...process.env,PORT:String(port)}});let logs='';child.stdout.on('data',b=>logs+=b);child.stderr.on('data',b=>logs+=b);for(let n=0;n<100;n++){try{if((await fetch(`http://127.0.0.1:${port}/health`)).ok)return;}catch{}if(child.exitCode!==null)throw Error(logs);await new Promise(r=>setTimeout(r,30));}throw Error('Startup timeout');}
  async function stop(){if(child&&child.exitCode===null){const done=once(child,'exit');child.kill('SIGTERM');await done;}}

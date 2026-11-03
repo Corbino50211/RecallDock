@@ -1,4 +1,5 @@
 {
   "port": 300,
-  "frontendOrigin": "https://corbino50211.github.io"
+  "frontendOrigin": "https://corbino50211.github.io",
+  "tunnel": true
 }

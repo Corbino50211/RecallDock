@@ -13,9 +13,10 @@ RECALLDOCK — SERVER.PRO QUICK SETUP
    No npm install, build, .env file, or extra startup flags needed.
 6. Open data/invite-code.txt in the file manager. Your private signup code
    is generated automatically the first time the server starts.
-7. Connect your HTTPS reverse proxy or tunnel to the app's allocated port.
-   HTTPS is required for the GitHub Pages website to connect. This ZIP
-   cannot create a domain or HTTPS tunnel automatically.
+7. Wait for MEMORY SERVER URL in the console. server.js automatically
+   downloads a pinned, checksum-verified Cloudflare helper and starts an
+   HTTPS Quick Tunnel. Its address is also in data/https-url.txt.
+   No terminal commands or Cloudflare account are needed.
 8. Open https://corbino50211.github.io/RecallDock/
    Enter your backend's HTTPS address (NOT the github.io website address),
    select Create an account, and enter your signup invite.
@@ -36,9 +37,29 @@ at least 24 random characters, then restart. Existing accounts still work.
 
 UPDATES
 Keep settings.json and data/. Replace only server.js, backend.js and
-package.json with the newer versions after stopping the app.
+package.json and tunnel.js with the newer versions after stopping the app.
 
 REQUIREMENTS
 A Server.pro service supporting custom Node.js apps, Node.js 24+, a
-persistent writable folder, an allocated port, and an HTTPS proxy/tunnel.
+persistent writable folder, an allocated port, outbound HTTPS downloads,
+and permission to execute the cloudflared child process. Cloudflare Tunnel
+also needs outbound TCP port 7844. A provider that blocks these cannot use
+the automatic tunnel.
 If the panel does not offer Node.js 24, this package will not run there.
+
+TUNNEL DETAILS
+This package uses a temporary Cloudflare Quick Tunnel. Its address can
+change on restart or recovery. Enter the new address in the website and
+rerun plugin setup with the new address when it changes. Accounts and
+memories stay in data/ and are not lost. Old plugin offline queues remain
+bound to the old endpoint; do not delete them if you need those entries.
+For a permanent address, configure a named Cloudflare tunnel separately
+and set "tunnel": false in settings.json.
+
+FIRST STARTUP / UPDATES
+Keep the Start Command box set to: server.js
+If upgrading, keep your existing data/ and settings.json. Add tunnel.js
+and replace server.js. Missing "tunnel" in old settings enables it by default.
+The downloaded helper is cached in bin/. No helper is bundled in this ZIP.
+If startup logs a download/permission/network error, the API keeps running
+but HTTPS will not be available until the hosting restriction is resolved.
