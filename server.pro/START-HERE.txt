@@ -1,0 +1,44 @@
+RECALLDOCK — SERVER.PRO QUICK SETUP
+
+1. Extract this ZIP on your computer.
+2. Upload ALL FILES INSIDE server.pro into the working folder of your
+   Server.pro Node.js app. server.js, backend.js, package.json and
+   settings.json must sit together. Do not upload the website files.
+   Use an empty app folder for a new install so existing apps are not overwritten.
+3. Choose Node.js 24 or newer.
+4. Open settings.json. Port defaults to 300. Change it if your service
+   allocated a different port. A panel PORT variable overrides this setting.
+5. Set the startup file to server.js and press Start.
+   If the panel wants a full command, use: node server.js
+   No npm install, build, .env file, or extra startup flags needed.
+6. Open data/invite-code.txt in the file manager. Your private signup code
+   is generated automatically the first time the server starts.
+7. Connect your HTTPS reverse proxy or tunnel to the app's allocated port.
+   HTTPS is required for the GitHub Pages website to connect. This ZIP
+   cannot create a domain or HTTPS tunnel automatically.
+8. Open https://corbino50211.github.io/RecallDock/
+   Enter your backend's HTTPS address (NOT the github.io website address),
+   select Create an account, and enter your signup invite.
+9. Create a device key under Devices & setup. Configure the Claude plugin
+   with that same backend HTTPS address and its device key.
+
+CHECK IT
+Open https://YOUR-BACKEND-ADDRESS/health
+You should see: {"ok":true}
+The backend homepage returns an API-only message. That is expected.
+
+KEEP YOUR DATA
+Accounts, memories and the private signup invite live in data/.
+Never delete that folder during updates. Stop the app before backing it up.
+Keep data/ out of GitHub and do not publish your invite code.
+To change the signup invite, stop the app, edit data/invite-code.txt with
+at least 24 random characters, then restart. Existing accounts still work.
+
+UPDATES
+Keep settings.json and data/. Replace only server.js, backend.js and
+package.json with the newer versions after stopping the app.
+
+REQUIREMENTS
+A Server.pro service supporting custom Node.js apps, Node.js 24+, a
+persistent writable folder, an allocated port, and an HTTPS proxy/tunnel.
+If the panel does not offer Node.js 24, this package will not run there.
