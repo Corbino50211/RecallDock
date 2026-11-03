@@ -5,38 +5,58 @@ Self-hosted persistent memory for Claude Code across chats and devices. Original
 ## Included
 
 - Responsive website with account registration/login, memory search and creation, deletion, JSON export, device key creation and revocation.
-- One Node.js process serves the website and API; SQLite survives restarts.
+- GitHub Pages serves the static website; Server.pro runs only the account and memory API. SQLite survives backend restarts.
 - Claude Code plugin with SessionStart recall and Stop capture of the final assistant reply.
 - Project namespaces shared across devices, plus manually created `global` memories.
 - Device-local retry queue, duplicate suppression, opt-in project capture, pause command, best-effort secret redaction.
-- Passwords hashed with scrypt, hashed bearer tokens, HTTP-only browser sessions, origin checks, request limits, tenant isolation, fixed static-file routes.
+- Passwords hashed with scrypt, hashed bearer tokens, short-lived browser bearer sessions, strict CORS/origin checks, request limits, tenant isolation, fixed static-file routes.
 - Zero npm dependencies. Requires Node.js **24 or newer** (uses built-in SQLite).
 
 This is v0.1: keyword search and recent-memory recall, not AI summarization or embeddings. It captures final assistant replies only, not user prompts, file contents, or tool observations. The most recent 10 matching project/global memories (up to 14,000 characters of serialized context) load at session start. Search older memories from the dashboard or CLI. Server administrators can read the database; this is not end-to-end encrypted. No email verification, email password reset, billing, or admin UI is included.
 
-## Quick local start
+## Hosting layout
 
-```sh
-cp .env.example .env
-# Edit .env: PUBLIC_URL=http://localhost:3000 and a private INVITE_CODE
-node --env-file=.env server.js
-```
+| Component | Host | Contents |
+| --- | --- | --- |
+| Website | GitHub Pages at `https://corbino50211.github.io/RecallDock/` once enabled | Only `public/` HTML, CSS, JS and public configuration |
+| Accounts and memories | Your Server.pro HTTPS endpoint | `server.js`, SQLite data and private environment settings |
+| Claude Code plugin | Each of your computers | Connects directly to the same Server.pro endpoint |
 
-Open http://localhost:3000, create an account using the invite, and create a device key from **Devices & setup**. Website and API are on the same origin: no separate frontend host is required.
+## Enable GitHub Pages
+
+1. Open **Settings → Pages** in this repository and select **GitHub Actions** as the source.
+2. Open **Actions → Deploy website to GitHub Pages → Run workflow**. Later pushes to website files deploy automatically.
+3. After the workflow succeeds, open `https://corbino50211.github.io/RecallDock/`.
+4. Enter your Server.pro **HTTPS API origin** in the login form. Optionally set `apiBaseUrl` in `public/config.js` to make it the default for everyone, then push. This is a public URL, never a password or key.
+
+GitHub Pages for a private personal repository requires GitHub Pro. Free accounts can use Pages from public repositories. Choose your preferred repository visibility/plan in GitHub; this project does not change it automatically. The workflow uploads only `public/`, never backend files, `.env`, or account data. Pages must be enabled before the configure/deploy steps succeed.
 
 ## Server.pro deployment
 
-Use a Server.pro service that can run a custom Node.js application with persistent writable storage and Node.js 24+. A game-server-only plan or an older Node runtime is insufficient. The exact panel controls and assigned port depend on your service.
+Use a Server.pro service with a custom Node.js runtime **24+**, persistent writable storage and an HTTPS proxy or tunnel. Exact panel controls and allocated ports depend on your service.
 
-1. Upload `server.js`, `package.json`, and the entire `public/` directory to your server's working directory. The plugin runs on your computers, not on Server.pro.
-2. Copy `.env.example` to `.env` on the server. Set `PORT` to your allocated web port (for example `300` **only if allocated to your service**), `DATA_DIR` to a persistent writable directory, and `INVITE_CODE` to a long random private value.
-3. Set `PUBLIC_URL` to the exact HTTPS origin users will visit, without a trailing slash, for example `https://memory.example.com`. This is used for browser origin checks; it does not configure DNS or TLS.
-4. Start with `node --env-file=.env server.js`. If your panel only accepts `server.js` as an entrypoint, set the variables in its environment settings instead. No package install or build is needed.
-5. Route HTTPS through your host's reverse proxy or a separately configured tunnel to your allocated port. The app speaks HTTP behind that proxy. Do not expose real accounts over public HTTP. Point DNS to the HTTPS endpoint as appropriate.
-6. Verify `/health`, sign in through the website, and test a device. Enable panel restart-on-crash if available.
-7. Keep `.env`, `data/`, and all SQLite files out of GitHub. Back up persistent data regularly.
+1. Upload **`server.js` and `package.json` only** to the backend working directory. Do not upload `public/`; it belongs on GitHub Pages.
+2. Copy `.env.example` to `.env` on Server.pro. Set `PORT` to your allocated web port, such as `300` only if your service allocated it. Set `DATA_DIR` to persistent storage and choose a long random `INVITE_CODE`.
+3. Set `PUBLIC_URL` to your API's exact HTTPS origin, for example `https://memory.example.com`.
+4. Keep `FRONTEND_ORIGIN=https://corbino50211.github.io` (lowercase, **no `/RecallDock/` path and no trailing slash**). If you use a custom Pages domain, use that origin instead. Keep `SERVE_FRONTEND=false`.
+5. Start `node --env-file=.env server.js`. If the panel only accepts a script name, use `server.js` and configure environment variables through the panel. No npm install/build is needed.
+6. Configure HTTPS through your reverse proxy or tunnel, forwarding to the backend's allocated port. The Node process speaks HTTP behind it. DNS and TLS are separate from `PUBLIC_URL`.
+7. Check your API's `/health`, then open the GitHub Pages website and enter the API URL to create your account with the invite.
+8. In the dashboard, create device keys. Configure each Claude plugin with **the API URL**, not the GitHub Pages URL.
 
-The service requires an invite for every registration. An unset invite disables registration. Existing users can still sign in. Rate limits are in-process and per socket IP/account; users behind a proxy share the socket IP quota. The app deliberately does not trust arbitrary forwarded-IP headers. Run one instance on one local SQLite data directory. This is not a distributed deployment.
+The backend serves only `/health` and `/api/*` by default. Browser requests must come from the configured frontend origin; CLI device requests can omit Origin. The frontend uses expiring bearer sessions with `credentials: omit`, so third-party cookies are unnecessary. Session tokens stay only in browser memory: reloading or closing the page requires signing in again. The non-secret API URL is remembered locally. CORS restricts browser origins; authenticated account isolation is enforced independently on every request.
+
+Registration requires the server invite; an unset invite disables signup. Existing accounts still work. Rate limits use socket IP/account; users behind a proxy share its IP quota. The app does not trust arbitrary forwarded-IP headers. Run one instance against one local SQLite directory. Keep `.env`, SQLite files and device keys out of GitHub. Turn on restart-on-crash if your panel supports it.
+
+## Local development
+
+For a local single-host preview, set `PUBLIC_URL=http://localhost:3000`, `FRONTEND_ORIGIN=http://localhost:3000`, `SERVE_FRONTEND=true`, and an invite in `.env`, then run:
+
+```sh
+node --env-file=.env server.js
+```
+
+Open http://localhost:3000 and enter that URL as the memory server. This optional preview mode does not change the production split.
 
 ### Backup and recovery
 
@@ -102,7 +122,9 @@ npm test
 
 The automated suite covers real HTTP registration/login, account isolation, cross-device access, deduplication, project filtering, search, export, deletion, persistence after restart, CSRF rejection, device-key privilege restrictions, revocation, and logout. Subprocess tests exercise actual hook scripts for capture, recall, pause, offline queueing and redaction.
 
-Not yet verified: live Claude Code loading, Windows/macOS execution, browser visual/interaction QA, and a real Server.pro deployment. Hook payloads and plugin layout follow the official documentation:
+The suite also tests GitHub Pages CORS preflight, rejected origins, browser login without cookies, device creation via browser bearer sessions, logout revocation, and API-only hosting.
+
+Not yet verified: live Claude Code loading, Windows/macOS execution, browser visual/interaction QA, a live Pages deployment, and a real Server.pro deployment. Hook payloads and plugin layout follow the official documentation:
 - https://code.claude.com/docs/en/hooks
 - https://code.claude.com/docs/en/plugins-reference
 

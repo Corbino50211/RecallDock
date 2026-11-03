@@ -51,3 +51,21 @@ test('real hook processes capture, reload, pause and queue offline',async()=>{
  }finally{await close(s);rmSync(root,{recursive:true,force:true});}
 });
 test('redacts private sections and common secrets',()=>{assert.equal(redact('<private>hidden</private> password=secret Bearer abc.def'),'[private] password=[redacted] Bearer [redacted]');});
+test('GitHub Pages CORS, bearer browser sessions and API-only hosting',async()=>{
+ const dir=mkdtempSync(path.join(tmpdir(),'recall-pages-')),frontendOrigin='https://corbino50211.github.io';
+ const s=createApp({dataDir:dir,origin:'https://api.example.com',frontendOrigin,invite:'test-invite'});await new Promise(r=>s.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+s.address().port;
+ const req=(route,method='GET',body,token,origin=frontendOrigin)=>fetch(base+route,{method,headers:{Origin:origin,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:body?JSON.stringify(body):undefined});
+ try{
+ const pre=await fetch(base+'/api/login',{method:'OPTIONS',headers:{Origin:frontendOrigin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type,authorization'}});assert.equal(pre.status,204);assert.equal(pre.headers.get('access-control-allow-origin'),frontendOrigin);assert.equal(pre.headers.get('access-control-allow-credentials'),null);
+ const bad=await fetch(base+'/api/login',{method:'OPTIONS',headers:{Origin:'https://evil.test','Access-Control-Request-Method':'POST'}});assert.equal(bad.status,403);assert.equal(bad.headers.get('access-control-allow-origin'),null);
+ assert.equal((await req('/')).status,404);assert.equal((await req('/app.js')).status,404);
+ const register=await req('/api/register','POST',{email:'pages@example.com',password:'long-password-123',invite:'test-invite',sessionMode:'bearer'});assert.equal(register.status,200);assert.equal(register.headers.get('set-cookie'),null);const {token}=await register.json();assert.ok(token);
+ const me=await req('/api/me','GET',null,token);assert.equal(me.status,200);assert.equal(me.headers.get('access-control-allow-origin'),frontendOrigin);
+ assert.equal((await req('/api/me','GET',null,token,'https://evil.test')).status,403);
+ assert.equal((await req('/api/devices','POST',{name:'Pages-created device'},token)).status,201);
+ assert.equal((await req('/api/memories','POST',{project:'pages',content:'Cross-origin memory'},token)).status,201);
+ assert.equal((await (await req('/api/memories','GET',null,token)).json()).length,1);
+ await req('/api/logout','POST',{},token);assert.equal((await req('/api/me','GET',null,token)).status,401);
+ const login=await req('/api/login','POST',{email:'pages@example.com',password:'long-password-123',sessionMode:'bearer'});assert.equal(login.status,200);assert.ok((await login.json()).token);
+ }finally{await close(s);rmSync(dir,{recursive:true,force:true});}
+});

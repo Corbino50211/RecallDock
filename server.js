@@ -5,7 +5,7 @@ import {promisify} from 'node:util';
 import {mkdirSync,readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 const derive=promisify(scrypt), hash=s=>createHash('sha256').update(s).digest('hex');
-export function createApp({dataDir=process.env.DATA_DIR||'./data',origin=process.env.PUBLIC_URL||'http://localhost:3000',invite=process.env.INVITE_CODE||'',secure=origin.startsWith('https:')}={}){
+export function createApp({dataDir=process.env.DATA_DIR||'./data',origin=process.env.PUBLIC_URL||'http://localhost:3000',invite=process.env.INVITE_CODE||'',secure=origin.startsWith('https:'),frontendOrigin=process.env.FRONTEND_ORIGIN||origin,serveFrontend=process.env.SERVE_FRONTEND==='true'}={}){
  mkdirSync(dataDir,{recursive:true,mode:0o700});
  const db=new DatabaseSync(`${dataDir}/recall.sqlite`); db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
  CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,email TEXT UNIQUE,password TEXT,salt TEXT);
@@ -22,11 +22,28 @@ export function createApp({dataDir=process.env.DATA_DIR||'./data',origin=process
  res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('Content-Security-Policy',"default-src 'self'; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
  const url=new URL(req.url,origin),p=url.pathname,m=req.method;
  const send=(data,status=200)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
+ const requestOrigin=req.headers.origin;
+ if(p.startsWith('/api/')){
+  res.setHeader('Vary','Origin');
+  if(requestOrigin&&requestOrigin!==frontendOrigin)fail('Invalid request origin',403);
+  if(requestOrigin===frontendOrigin){
+   res.setHeader('Access-Control-Allow-Origin',frontendOrigin);
+   res.setHeader('Access-Control-Allow-Methods','GET, POST, DELETE, OPTIONS');
+   res.setHeader('Access-Control-Allow-Headers','Content-Type, Authorization');
+   res.setHeader('Access-Control-Max-Age','600');
+  }
+  if(m==='OPTIONS'){
+   const requested=req.headers['access-control-request-method'];
+   const headers=(req.headers['access-control-request-headers']||'').toLowerCase().split(',').map(x=>x.trim()).filter(Boolean);
+   if(requestOrigin!==frontendOrigin||!['GET','POST','DELETE'].includes(requested)||headers.some(x=>!['content-type','authorization'].includes(x)))fail('Preflight denied',403);
+   res.writeHead(204);return res.end();
+  }
+ }
  if(p==='/health')return send({ok:true});
- if(!p.startsWith('/api/')){if(m!=='GET')return fail('Not found',404);const files={'/':'index.html','/app.js':'app.js','/style.css':'style.css'};if(!files[p])return fail('Not found',404);res.setHeader('Content-Type',p.endsWith('.js')?'text/javascript':p.endsWith('.css')?'text/css':'text/html');return res.end(readFileSync(new URL(`./public/${files[p]}`,import.meta.url)));}
+ if(!p.startsWith('/api/')){if(!serveFrontend)fail('API only. Open the GitHub Pages website.',404);if(m!=='GET')return fail('Not found',404);const files={'/':'index.html','/app.js':'app.js','/style.css':'style.css','/config.js':'config.js'};if(!files[p])return fail('Not found',404);res.setHeader('Content-Type',p.endsWith('.js')?'text/javascript':p.endsWith('.css')?'text/css':'text/html');return res.end(readFileSync(new URL(`./public/${files[p]}`,import.meta.url)));}
  rate(req.socket.remoteAddress,240);
  const bearer=req.headers.authorization?.startsWith('Bearer ')?req.headers.authorization.slice(7):null;
- if(!['GET','HEAD'].includes(m)&&!bearer&&req.headers.origin!==origin)fail('Invalid request origin',403);
+ if(!['GET','HEAD'].includes(m)&&!bearer&&req.headers.origin!==frontendOrigin)fail('Invalid request origin',403);
  let b={};if(['POST','PUT','PATCH'].includes(m)){if(!req.headers['content-type']?.startsWith('application/json'))fail('JSON required',415);let raw='';for await(const chunk of req){raw+=chunk;if(Buffer.byteLength(raw)>32768)fail('Request too large',413);}try{b=JSON.parse(raw||'{}');}catch{fail('Invalid JSON');}}
  if(p==='/api/register'||p==='/api/login'){
  if(m!=='POST')fail('Method not allowed',405);rate('auth:'+req.socket.remoteAddress,10);
@@ -34,7 +51,7 @@ export function createApp({dataDir=process.env.DATA_DIR||'./data',origin=process
  let u=db.prepare('SELECT * FROM users WHERE email=?').get(email);
  if(p.endsWith('register')){if(!invite||b.invite!==invite)fail('A valid server invite code is required',403);if(password.length<12)fail('Use a password with at least 12 characters');if(u)fail('Unable to create account',409);const salt=randomBytes(16).toString('hex'),pw=(await derive(password,salt,64)).toString('hex');u={id:randomUUID(),email};try{db.prepare('INSERT INTO users VALUES(?,?,?,?)').run(u.id,email,pw,salt);}catch{fail('Unable to create account',409);}}
  else{const candidate=await derive(password,u?.salt||'missing-user',64);if(!u||!timingSafeEqual(candidate,Buffer.from(u.password,'hex')))fail('Invalid email or password',401);}
- const value=issue(u.id,'session','Website');res.setHeader('Set-Cookie',`recall=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${secure?'; Secure':''}`);return send({email:u.email});
+ const value=issue(u.id,'session','Website');if(b.sessionMode==='bearer')return send({email:u.email,token:value,expiresAt:Date.now()+86400000});res.setHeader('Set-Cookie',`recall=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${secure?'; Secure':''}`);return send({email:u.email});
  }
  const rawToken=bearer||req.headers.cookie?.split('; ').find(x=>x.startsWith('recall='))?.slice(7)||'';
  const auth=db.prepare('SELECT * FROM tokens WHERE hash=? AND expires>?').get(hash(rawToken),Date.now());if(!auth)fail('Sign in required',401);
