@@ -1,0 +1,1 @@
+{"name":"recalldock-marketplace","owner":{"name":"RecallDock"},"plugins":[{"name":"recalldock","source":"./plugin","description":"Persistent memory across devices"}]}
