@@ -105,6 +105,26 @@ For permanent marketplace installation after this repository is on GitHub, run i
 
 Then restart Claude Code. `--plugin-dir` is useful for local testing and development; do not load both a marketplace copy and a local copy simultaneously.
 
+### HTTP-only Server.pro
+
+The all-in-one website can be opened directly at your Server.pro HTTP address.
+For the Claude plugin, explicitly enable HTTP during setup:
+
+```sh
+node plugin/scripts/recall.mjs setup --allow-http
+```
+
+Enter `http://corbino5021.lets.game:300/` and your device key in the local
+terminal prompts. This setting is saved for this configured server; ordinary
+setup still requires HTTPS for remote servers. HTTP sends passwords, device
+keys and memories without encryption. Use a unique account password and avoid
+sensitive memories on this connection. You may manually copy the displayed
+device key if the browser's Copy button is unavailable on HTTP.
+
+To stop automatic tunnel attempts, change `"tunnel": true` to `"tunnel": false`
+in Server.pro's `settings.json` and restart. The website and API continue to
+run directly on the allocated port. No server code update is required for HTTP.
+
 ### Capture and privacy controls
 
 ```sh
