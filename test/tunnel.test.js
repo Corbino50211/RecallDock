@@ -10,7 +10,7 @@ const until=async fn=>{for(let i=0;i<100;i++){if(fn())return;await new Promise(r
 test('tunnel URL capture, recovery and shutdown with simulated child processes',async()=>{
  const root=mkdtempSync(path.join(tmpdir(),'recall-tunnel-'));mkdirSync(path.join(root,'data'));const children=[],logs=[];let stop;
  try{stop=startTunnel({root,port:300,prepare:async()=>'/test/cloudflared',retryMs:5,log:s=>logs.push(s),spawnProcess:(file,args)=>{assert.ok(args.includes('http://127.0.0.1:300'));assert.ok(args.includes('http2'));const c=new EventEmitter();c.stdout=new PassThrough();c.stderr=new PassThrough();c.exitCode=null;c.kill=()=>{c.exitCode=0;c.emit('exit',0);};children.push(c);return c;}});
- await until(()=>children.length===1);children[0].stderr.write('https://test-recall.trycloud');children[0].stderr.write('flare.com\n');const f=path.join(root,'data/https-url.txt');await until(()=>logs.some(x=>x.includes('MEMORY SERVER URL')));assert.equal(readFileSync(f,'utf8').trim(),'https://test-recall.trycloudflare.com');
+ await until(()=>children.length===1);children[0].stderr.write('https://test-recall.trycloud');children[0].stderr.write('flare.com\n');const f=path.join(root,'data/https-url.txt');await until(()=>logs.some(x=>x.includes('OPEN YOUR WEBSITE')));assert.equal(readFileSync(f,'utf8').trim(),'https://test-recall.trycloudflare.com');
  children[0].kill();await until(()=>children.length===2);assert.equal(existsSync(f),false);stop();await until(()=>children[1].exitCode===0);
  }finally{stop?.();await new Promise(r=>setTimeout(r,30));rmSync(root,{recursive:true,force:true});}
 });

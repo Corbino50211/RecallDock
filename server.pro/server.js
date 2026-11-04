@@ -18,12 +18,13 @@ async function start(){
  const invite=readFileSync(inviteFile,'utf8').trim();if(invite.length<24)throw Error('data/invite-code.txt is invalid. Restore it or enter a private code with at least 24 characters.');
  const {createApp}=await import('./backend.js');
  let stopTunnel=()=>{};
- const server=createApp({dataDir,origin:`http://localhost:${port}`,frontendOrigin:frontend.origin,secure:true,serveFrontend:false,invite});
+ const server=createApp({dataDir,origin:`http://localhost:${port}`,frontendOrigin:frontend.origin,secure:true,serveFrontend:true,invite});
  server.on('error',e=>{console.error(e.code==='EADDRINUSE'?'Port is already in use. Check settings.json and your allocated port.':e.message);process.exitCode=1;server.close();});
  server.listen(port,'0.0.0.0',()=>{
   console.log(`RecallDock API running on port ${port}.`);
-  console.log('Your signup invite is in data/invite-code.txt (open it in the file manager).');
-  console.log('Website: https://corbino50211.github.io/RecallDock/');
+  console.log('SETUP CODE: '+invite);
+  console.log('Use this private code once when creating your account. Do not share it.');
+  console.log('Website, accounts and memories are running together. Waiting for your website link…');
   if(settings.tunnel!==false)stopTunnel=startTunnel({root,port});
   else console.log('Automatic tunnel disabled. Connect your own HTTPS proxy to this port.');
  });

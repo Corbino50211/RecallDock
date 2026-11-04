@@ -28,7 +28,7 @@ export function startTunnel({root,port,prepare=prepareBinary,spawnProcess=spawn,
   const cwd=path.join(root,'data','tunnel');await mkdir(cwd,{recursive:true,mode:0o700});
   child=spawnProcess(binary,['tunnel','--no-autoupdate','--protocol','http2','--url',`http://127.0.0.1:${port}`],{cwd,stdio:['ignore','pipe','pipe']});
   let buffer='',published=false,finished=false;
-  const output=async chunk=>{buffer=(buffer+chunk.toString()).slice(-8192);const match=buffer.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com\b/);if(match&&!published&&!closed&&current===generation){published=true;try{await writeFile(urlFile,match[0]+'\n',{mode:0o600});if(closed||current!==generation){await clearURL();return;}log('MEMORY SERVER URL: '+match[0]);log('Copy that address into the website and Claude plugin. Also saved in data/https-url.txt.');}catch(e){log('Could not save tunnel URL: '+e.message);}}};
+  const output=async chunk=>{buffer=(buffer+chunk.toString()).slice(-8192);const match=buffer.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com\b/);if(match&&!published&&!closed&&current===generation){published=true;try{await writeFile(urlFile,match[0]+'\n',{mode:0o600});if(closed||current!==generation){await clearURL();return;}log('OPEN YOUR WEBSITE: '+match[0]);log('Open that link in your browser. No server address to configure.');}catch(e){log('Could not save tunnel URL: '+e.message);}}};
   child.stdout.on('data',output);child.stderr.on('data',output);
   const ended=reason=>{if(finished)return;finished=true;generation++;void clearURL();if(closed)return;log('HTTPS tunnel stopped: '+reason);retry();};
   child.once('error',e=>ended(e.code||e.message));child.once('exit',(code,signal)=>ended(signal||String(code)));

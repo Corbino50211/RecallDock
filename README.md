@@ -2,6 +2,21 @@
 
 Self-hosted persistent memory for Claude Code across chats and devices. Original implementation inspired by the use case of claude-mem; no claude-mem source is copied and this project is not affiliated with Anthropic or claude-mem.
 
+## Easiest setup: everything on Server.pro
+
+Use the complete [`server.pro/`](server.pro/) folder. Upload its contents,
+including `public/`, keep `server.js` as the Start Command, and start it.
+Open the **OPEN YOUR WEBSITE** link printed in the console. Create your
+account with the **SETUP CODE** printed there. The website connects to its
+own backend automatically. Node.js 24+ is required.
+
+When updating, preserve `data/` and `settings.json`. The automatic HTTPS
+helper needs outbound network and child-process permissions. Its temporary
+URL can change after restart; accounts and memories remain saved.
+
+The following GitHub Pages instructions describe the optional split-host
+setup. They are not needed for the all-in-one Server.pro folder.
+
 ## Included
 
 - Responsive website with account registration/login, memory search and creation, deletion, JSON export, device key creation and revocation.

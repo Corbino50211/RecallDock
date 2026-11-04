@@ -1,65 +1,44 @@
-RECALLDOCK — SERVER.PRO QUICK SETUP
+RECALLDOCK — ONE UPLOAD, ONE START COMMAND
 
-1. Extract this ZIP on your computer.
-2. Upload ALL FILES INSIDE server.pro into the working folder of your
-   Server.pro Node.js app. server.js, backend.js, package.json and
-   settings.json must sit together. Do not upload the website files.
-   Use an empty app folder for a new install so existing apps are not overwritten.
-3. Choose Node.js 24 or newer.
-4. Open settings.json. Port defaults to 300. Change it if your service
-   allocated a different port. A panel PORT variable overrides this setting.
-5. Set the startup file to server.js and press Start.
-   If the panel wants a full command, use: node server.js
-   No npm install, build, .env file, or extra startup flags needed.
-6. Open data/invite-code.txt in the file manager. Your private signup code
-   is generated automatically the first time the server starts.
-7. Wait for MEMORY SERVER URL in the console. server.js automatically
-   downloads a pinned, checksum-verified Cloudflare helper and starts an
-   HTTPS Quick Tunnel. Its address is also in data/https-url.txt.
-   No terminal commands or Cloudflare account are needed.
-8. Open https://corbino50211.github.io/RecallDock/
-   Enter your backend's HTTPS address (NOT the github.io website address),
-   select Create an account, and enter your signup invite.
-9. Create a device key under Devices & setup. Configure the Claude plugin
-   with that same backend HTTPS address and its device key.
+1. STOP your Server.pro app.
+2. Upload EVERYTHING INSIDE this server.pro folder into your app folder.
+   Include the public folder. Keep your existing data folder and settings.json
+   if you already installed RecallDock. Do not delete your existing files.
+3. Set Start Command to server.js and press START.
+4. In the console, find:
+      OPEN YOUR WEBSITE: https://...
+      SETUP CODE: ...
+   Open that website link. Click Create an account and use the setup code.
 
-CHECK IT
-Open https://YOUR-BACKEND-ADDRESS/health
-You should see: {"ok":true}
-The backend homepage returns an API-only message. That is expected.
+DONE. The website, accounts and memories are all on this Server.pro app.
+No GitHub Pages setup. No database installation. No terminal commands.
+No memory-server URL to type into the website.
 
-KEEP YOUR DATA
-Accounts, memories and the private signup invite live in data/.
-Never delete that folder during updates. Stop the app before backing it up.
-Keep data/ out of GitHub and do not publish your invite code.
-To change the signup invite, stop the app, edit data/invite-code.txt with
-at least 24 random characters, then restart. Existing accounts still work.
+You need Node.js 24 or newer. Port defaults to 300. Only change the port
+in settings.json if Server.pro allocated a different one. A panel PORT
+environment variable takes precedence.
 
-UPDATES
-Keep settings.json and data/. Replace only server.js, backend.js and
-package.json and tunnel.js with the newer versions after stopping the app.
+Already installed? Upload the new server.js, backend.js, tunnel.js,
+package.json and entire public folder. KEEP data/ and settings.json.
+The data folder holds your existing accounts and memories.
 
-REQUIREMENTS
-A Server.pro service supporting custom Node.js apps, Node.js 24+, a
-persistent writable folder, an allocated port, outbound HTTPS downloads,
-and permission to execute the cloudflared child process. Cloudflare Tunnel
-also needs outbound TCP port 7844. A provider that blocks these cannot use
-the automatic tunnel.
-If the panel does not offer Node.js 24, this package will not run there.
+HTTPS is started automatically through Cloudflare. The first start downloads
+and verifies the helper. Your host must allow downloading/running it and
+outbound TCP port 7844. The helper stays cached in bin/ for later starts.
+If the tunnel fails, send the console error. The website is also served on
+the app's allocated HTTP port, but HTTP does not encrypt login details.
+Use the HTTPS link for your account.
 
-TUNNEL DETAILS
-This package uses a temporary Cloudflare Quick Tunnel. Its address can
-change on restart or recovery. Enter the new address in the website and
-rerun plugin setup with the new address when it changes. Accounts and
-memories stay in data/ and are not lost. Old plugin offline queues remain
-bound to the old endpoint; do not delete them if you need those entries.
-For a permanent address, configure a named Cloudflare tunnel separately
-and set "tunnel": false in settings.json.
+The temporary HTTPS link can change when the server restarts. Use the latest
+OPEN YOUR WEBSITE link (also stored in data/https-url.txt). Your saved data
+stays on the server. A permanent domain needs a separately configured named
+tunnel; the temporary link needs no domain or Cloudflare account.
 
-FIRST STARTUP / UPDATES
-Keep the Start Command box set to: server.js
-If upgrading, keep your existing data/ and settings.json. Add tunnel.js
-and replace server.js. Missing "tunnel" in old settings enables it by default.
-The downloaded helper is cached in bin/. No helper is bundled in this ZIP.
-If startup logs a download/permission/network error, the API keeps running
-but HTTPS will not be available until the hosting restriction is resolved.
+The setup code is also in data/invite-code.txt. Keep it private. It is used
+for creating accounts, not for signing in to accounts you already created.
+Stop the app before backing up the complete data folder.
+
+CONNECT CLAUDE CODE
+After signing in, open Devices & setup. Generate a key for each computer
+and follow the plugin setup instructions. Use this website's HTTPS URL in
+the plugin's setup prompt. If the temporary URL changes, rerun plugin setup.

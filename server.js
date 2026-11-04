@@ -23,11 +23,16 @@ export function createApp({dataDir=process.env.DATA_DIR||'./data',origin=process
  const url=new URL(req.url,origin),p=url.pathname,m=req.method;
  const send=(data,status=200)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
  const requestOrigin=req.headers.origin;
+ // A self-hosted website may use its current tunnel hostname. Never trust
+ // X-Forwarded-Host; require the browser's Origin to match the actual Host.
+ let sameHost=false;
+ try{const o=new URL(requestOrigin);sameHost=serveFrontend&&['http:','https:'].includes(o.protocol)&&o.host===req.headers.host;}catch{}
+ const allowedOrigin=sameHost?requestOrigin:frontendOrigin;
  if(p.startsWith('/api/')){
   res.setHeader('Vary','Origin');
-  if(requestOrigin&&requestOrigin!==frontendOrigin)fail('Invalid request origin',403);
-  if(requestOrigin===frontendOrigin){
-   res.setHeader('Access-Control-Allow-Origin',frontendOrigin);
+  if(requestOrigin&&requestOrigin!==allowedOrigin)fail('Invalid request origin',403);
+  if(requestOrigin===allowedOrigin){
+   res.setHeader('Access-Control-Allow-Origin',allowedOrigin);
    res.setHeader('Access-Control-Allow-Methods','GET, POST, DELETE, OPTIONS');
    res.setHeader('Access-Control-Allow-Headers','Content-Type, Authorization');
    res.setHeader('Access-Control-Max-Age','600');
@@ -35,7 +40,7 @@ export function createApp({dataDir=process.env.DATA_DIR||'./data',origin=process
   if(m==='OPTIONS'){
    const requested=req.headers['access-control-request-method'];
    const headers=(req.headers['access-control-request-headers']||'').toLowerCase().split(',').map(x=>x.trim()).filter(Boolean);
-   if(requestOrigin!==frontendOrigin||!['GET','POST','DELETE'].includes(requested)||headers.some(x=>!['content-type','authorization'].includes(x)))fail('Preflight denied',403);
+   if(requestOrigin!==allowedOrigin||!['GET','POST','DELETE'].includes(requested)||headers.some(x=>!['content-type','authorization'].includes(x)))fail('Preflight denied',403);
    res.writeHead(204);return res.end();
   }
  }
@@ -43,7 +48,7 @@ export function createApp({dataDir=process.env.DATA_DIR||'./data',origin=process
  if(!p.startsWith('/api/')){if(!serveFrontend)fail('API only. Open the GitHub Pages website.',404);if(m!=='GET')return fail('Not found',404);const files={'/':'index.html','/app.js':'app.js','/style.css':'style.css','/config.js':'config.js'};if(!files[p])return fail('Not found',404);res.setHeader('Content-Type',p.endsWith('.js')?'text/javascript':p.endsWith('.css')?'text/css':'text/html');return res.end(readFileSync(new URL(`./public/${files[p]}`,import.meta.url)));}
  rate(req.socket.remoteAddress,240);
  const bearer=req.headers.authorization?.startsWith('Bearer ')?req.headers.authorization.slice(7):null;
- if(!['GET','HEAD'].includes(m)&&!bearer&&req.headers.origin!==frontendOrigin)fail('Invalid request origin',403);
+ if(!['GET','HEAD'].includes(m)&&!bearer&&req.headers.origin!==allowedOrigin)fail('Invalid request origin',403);
  let b={};if(['POST','PUT','PATCH'].includes(m)){if(!req.headers['content-type']?.startsWith('application/json'))fail('JSON required',415);let raw='';for await(const chunk of req){raw+=chunk;if(Buffer.byteLength(raw)>32768)fail('Request too large',413);}try{b=JSON.parse(raw||'{}');}catch{fail('Invalid JSON');}}
  if(p==='/api/register'||p==='/api/login'){
  if(m!=='POST')fail('Method not allowed',405);rate('auth:'+req.socket.remoteAddress,10);

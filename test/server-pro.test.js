@@ -20,7 +20,10 @@ test('standalone upload starts from another cwd, creates invite and persists acc
  await boot();const invite=readFileSync(path.join(dir,'data/invite-code.txt'),'utf8').trim();assert.ok(invite.length>=24);
  const credentials={email:'upload@example.com',password:'long-password-123',sessionMode:'bearer'};
  assert.equal((await call('register',{...credentials,invite})).status,200);
- assert.equal((await fetch(`http://127.0.0.1:${port}/`)).status,404);
+ const page=await fetch(`http://127.0.0.1:${port}/`);assert.equal(page.status,200);assert.match(await page.text(),/authStatus/);
+ const config=await fetch(`http://127.0.0.1:${port}/config.js`);assert.match(await config.text(),/sameOrigin: true/);
+ const login=await fetch(`http://127.0.0.1:${port}/api/login`,{method:'POST',headers:{Origin:`http://127.0.0.1:${port}`,'Content-Type':'application/json'},body:JSON.stringify(credentials)});assert.equal(login.status,200);
+ const rejected=await fetch(`http://127.0.0.1:${port}/api/login`,{method:'POST',headers:{Origin:'https://evil.example','Content-Type':'application/json'},body:JSON.stringify(credentials)});assert.equal(rejected.status,403);
  await stop();await boot();assert.equal(readFileSync(path.join(dir,'data/invite-code.txt'),'utf8').trim(),invite);assert.equal((await call('login',credentials)).status,200);
  }finally{await stop();rmSync(dir,{recursive:true,force:true});}
 });
